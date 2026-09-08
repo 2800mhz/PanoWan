@@ -1,13 +1,14 @@
 import { ZONE_NAMES, ZONE_DESCRIPTIONS, SLICE_DESCRIPTIONS } from '@/lib/constants';
 import type { Scene, Segment } from '@/lib/types';
+import { getStoredGroqApiKey } from '@/lib/groq-key';
 
 import { Groq } from 'groq-sdk';
 
 function getGroqApiKey(): string {
-  const apiKey = import.meta.env.VITE_GROQ_API_KEY || process.env.GROQ_API_KEY;
+  const apiKey = getStoredGroqApiKey() || import.meta.env.VITE_GROQ_API_KEY;
   if (!apiKey) {
     throw new Error(
-      'Missing Groq API key. Set VITE_GROQ_API_KEY in your local .env file before generating prompts.'
+      'Groq API key yok. Sağ üstteki Groq Key düğmesinden anahtarınızı girin.'
     );
   }
   return apiKey;

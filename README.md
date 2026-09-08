@@ -1,3 +1,5 @@
+![PanoWan editor screenshot](public/readme-screenshot.png)
+
 # Panoramic Dream Weaver
 
 Panoramic Dream Weaver is a segment-based 360 scene prompt builder for AI image and video workflows. It helps you break a panoramic world into structured zones and slices, generate detailed prompts for each segment, and combine them into a coherent master prompt for immersive panoramic generation.
@@ -10,15 +12,16 @@ Panoramic Dream Weaver is a segment-based 360 scene prompt builder for AI image 
 - Generate per-segment prompts with Groq.
 - Merge those prompts into a single master panoramic prompt.
 - Upload and preview equirectangular panoramic reference images in an interactive 360 viewer.
-- Store projects, auth, and assets through Supabase.
+- Store scenes, segments, images, and the Groq key locally in the browser.
 
 ## Feature Overview
 
-- Authentication with Supabase
+- No login or backend setup
 - Scene list and editor flows
 - Segment-based prompt authoring
 - Master prompt synthesis
 - Panoramic image upload
+- Groq API key entry from the top-right menu
 - Interactive 360 viewer built with Three.js
 - TanStack Router + TanStack Query app structure
 
@@ -27,7 +30,6 @@ Panoramic Dream Weaver is a segment-based 360 scene prompt builder for AI image 
 - React 19
 - TanStack Start / Router / Query
 - Vite
-- Supabase
 - Groq SDK
 - Three.js
 - Tailwind CSS
@@ -37,25 +39,15 @@ Panoramic Dream Weaver is a segment-based 360 scene prompt builder for AI image 
 ```text
 src/
   components/         UI, viewer, editor panels
-  hooks/              Auth and app hooks
-  integrations/       Supabase clients and types
   lib/                API helpers, constants, prompt generation
   routes/             App routes
-supabase/
-  migrations/         Database and storage changes
 ```
 
 ## Environment Variables
 
-Create a local `.env` file from `.env.example`.
+No environment variables are required for normal local use. Open the app and save your Groq key from the top-right "Groq Key" menu.
 
-Required values:
-
-- `VITE_SUPABASE_URL`
-- `VITE_SUPABASE_PUBLISHABLE_KEY`
-- `SUPABASE_URL`
-- `SUPABASE_SERVICE_ROLE_KEY`
-- `VITE_GROQ_API_KEY`
+You can still create a local `.env` file from `.env.example` if you want a development fallback:
 
 Example:
 
@@ -89,18 +81,13 @@ Lint:
 npm run lint
 ```
 
-## Supabase
-
-This repo includes Supabase migrations under `supabase/migrations/`.
-
-Before running the app, make sure your Supabase project is configured and the required tables, auth policies, and storage setup are applied.
-
 ## Notes
 
-- The app expects a valid Groq API key locally for prompt generation.
-- Secrets are intentionally not committed.
+- Data is stored in browser `localStorage`, so it is local to that browser/profile.
+- Uploaded images are saved as data URLs in `localStorage`; keep them small.
+- A valid Groq API key is required only when generating prompts.
 - The current UI is functional and fast to iterate on, but still prototype-heavy.
 
 ## Suggested GitHub Description
 
-`Segment-based 360 panoramic scene prompt builder for AI image and video generation with Supabase auth and immersive preview.`
+`Local-first 360 panoramic scene prompt builder for AI image and video generation with Groq and immersive preview.`

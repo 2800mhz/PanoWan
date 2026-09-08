@@ -1,9 +1,8 @@
-import { createFileRoute, Link, useNavigate } from '@tanstack/react-router';
+import { createFileRoute, Link } from '@tanstack/react-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState, useCallback, useEffect } from 'react';
 import { fetchScene, fetchSegments, upsertSegment, updateScene } from '@/lib/api';
 import { generateSegmentPrompt, generateMasterPrompt } from '@/lib/prompt-generator';
-import { useAuthContext } from '@/hooks/useAuthContext';
 import UserMenu from '@/components/UserMenu';
 import ImageUpload from '@/components/ImageUpload';
 import PanoramicViewer from '@/components/PanoramicViewer';
@@ -27,31 +26,27 @@ export const Route = createFileRoute('/scene/$id')({
 
 function SceneEditorPage() {
   const { id } = Route.useParams();
-  const navigate = useNavigate();
-  const { user, loading: authLoading } = useAuthContext();
   const queryClient = useQueryClient();
   const [selectedSegment, setSelectedSegment] = useState<SegmentPosition | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [masterPrompt, setMasterPrompt] = useState('');
   const [isGeneratingMaster, setIsGeneratingMaster] = useState(false);
+  const [isClient, setIsClient] = useState(false);
 
-  // Redirect to login if not authenticated
   useEffect(() => {
-    if (!authLoading && !user) {
-      navigate({ to: '/auth/login' });
-    }
-  }, [user, authLoading, navigate]);
+    setIsClient(true);
+  }, []);
 
   const { data: scene, isLoading: sceneLoading } = useQuery({
     queryKey: ['scene', id],
     queryFn: () => fetchScene(id),
-    enabled: !!user,
+    enabled: isClient,
   });
 
   const { data: segments = [], isLoading: segmentsLoading } = useQuery({
     queryKey: ['segments', id],
     queryFn: () => fetchSegments(id),
-    enabled: !!user,
+    enabled: isClient,
   });
 
   const invalidateSegments = useCallback(() => {
@@ -109,7 +104,7 @@ function SceneEditorPage() {
     }
   }, [id, queryClient]);
 
-  if (sceneLoading || segmentsLoading) {
+  if (!isClient || sceneLoading || segmentsLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
         <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
@@ -190,7 +185,6 @@ function SceneEditorPage() {
               <PanoramicViewer imageUrl={scene.image_url} alt={scene.title} />
               <div className="mt-2 flex justify-end">
                 <ImageUpload
-                  sceneId={id}
                   currentImageUrl={scene.image_url}
                   onUploaded={handleImageUploaded}
                 />
@@ -198,7 +192,6 @@ function SceneEditorPage() {
             </>
           ) : (
             <ImageUpload
-              sceneId={id}
               currentImageUrl={scene.image_url}
               onUploaded={handleImageUploaded}
             />

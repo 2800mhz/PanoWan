@@ -1,18 +1,25 @@
 import { useState, useRef, useCallback } from 'react';
 import { Upload, X, AlertTriangle, Image as ImageIcon } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
 interface ImageUploadProps {
-  sceneId: string;
   currentImageUrl?: string | null;
   onUploaded: (url: string) => void;
 }
 
-const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20MB
+const MAX_FILE_SIZE = 3 * 1024 * 1024; // localStorage keeps images inline, so stay under browser quota.
 const ACCEPTED_FORMATS = ['image/jpeg', 'image/png', 'image/webp'];
 
-export default function ImageUpload({ sceneId, currentImageUrl, onUploaded }: ImageUploadProps) {
+function readFileAsDataUrl(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result));
+    reader.onerror = () => reject(new Error('Görüntü okunamadı'));
+    reader.readAsDataURL(file);
+  });
+}
+
+export default function ImageUpload({ currentImageUrl, onUploaded }: ImageUploadProps) {
   const [uploading, setUploading] = useState(false);
   const [dragOver, setDragOver] = useState(false);
   const [aspectWarning, setAspectWarning] = useState('');
@@ -23,7 +30,7 @@ export default function ImageUpload({ sceneId, currentImageUrl, onUploaded }: Im
       return 'Desteklenmeyen format. JPEG, PNG veya WebP kullanın.';
     }
     if (file.size > MAX_FILE_SIZE) {
-      return 'Dosya boyutu 20MB\'dan büyük olamaz.';
+      return 'Dosya boyutu 3MB\'dan büyük olamaz.';
     }
     return null;
   }, []);
@@ -66,44 +73,16 @@ export default function ImageUpload({ sceneId, currentImageUrl, onUploaded }: Im
 
     setUploading(true);
     try {
-      const fileExt = file.name.split('.').pop();
-      const filePath = `${sceneId}/panoramic.${fileExt}`;
-
-      // Remove any existing files in the scene folder before uploading.
-      // This avoids relying on upsert which can trigger RLS evaluation
-      // issues when storage policies reference RLS-protected tables.
-      const { data: existingFiles } = await supabase.storage
-        .from('scenes')
-        .list(sceneId);
-
-      if (existingFiles && existingFiles.length > 0) {
-        const { error: removeError } = await supabase.storage
-          .from('scenes')
-          .remove(existingFiles.map(f => `${sceneId}/${f.name}`));
-        if (removeError) throw removeError;
-      }
-
-      const { error: uploadError } = await supabase.storage
-        .from('scenes')
-        .upload(filePath, file);
-
-      if (uploadError) throw uploadError;
-
-      const { data: { publicUrl } } = supabase.storage
-        .from('scenes')
-        .getPublicUrl(filePath);
-
-      // Append cache-busting parameter to prevent stale/cached 400 responses
-      const urlWithCacheBust = `${publicUrl}?t=${Date.now()}`;
-      onUploaded(urlWithCacheBust);
-      toast.success('Görüntü yüklendi');
+      const imageUrl = await readFileAsDataUrl(file);
+      onUploaded(imageUrl);
+      toast.success('Görüntü localStorage için hazırlandı');
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Yükleme hatası';
       toast.error(message);
     } finally {
       setUploading(false);
     }
-  }, [sceneId, validateFile, checkAspectRatio, onUploaded]);
+  }, [validateFile, checkAspectRatio, onUploaded]);
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -169,7 +148,7 @@ export default function ImageUpload({ sceneId, currentImageUrl, onUploaded }: Im
                 {dragOver ? 'Bırakın' : 'Görüntü yükleyin'}
               </p>
               <p className="mt-1 text-xs text-muted-foreground">
-                Sürükle-bırak veya tıklayın · JPEG, PNG, WebP · Max 20MB
+                Sürükle-bırak veya tıklayın · JPEG, PNG, WebP · Max 3MB
               </p>
               <p className="mt-1 text-xs text-muted-foreground">
                 Önerilen oran: 32:9 (panoramik)

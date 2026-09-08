@@ -160,7 +160,7 @@ export default function SegmentPanel({
             await handleSave();
             // Build segment object directly from current state instead of waiting for query refresh
             const segmentForGeneration: Segment = {
-              id: segment?.id ?? '',
+              id: segment?.id ?? 'local-preview',
               scene_id: sceneId,
               zone: selected.zone,
               slice: selected.slice,

@@ -1,24 +1,30 @@
-import { useState } from 'react';
-import { useAuthContext } from '@/hooks/useAuthContext';
-import { LogOut, User, ChevronDown } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Check, Eye, EyeOff, KeyRound, Save, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
-import { useNavigate } from '@tanstack/react-router';
+import { getStoredGroqApiKey, setStoredGroqApiKey } from '@/lib/groq-key';
 
 export default function UserMenu() {
-  const { user, signOut } = useAuthContext();
-  const navigate = useNavigate();
   const [open, setOpen] = useState(false);
+  const [showKey, setShowKey] = useState(false);
+  const [apiKey, setApiKey] = useState('');
 
-  if (!user) return null;
+  useEffect(() => {
+    setApiKey(getStoredGroqApiKey());
+  }, [open]);
 
-  const handleSignOut = async () => {
-    try {
-      await signOut();
-      toast.success('Çıkış yapıldı');
-      navigate({ to: '/auth/login' });
-    } catch {
-      toast.error('Çıkış yapılamadı');
-    }
+  const hasKey = Boolean(apiKey.trim());
+
+  const handleSave = (event: React.FormEvent) => {
+    event.preventDefault();
+    setStoredGroqApiKey(apiKey);
+    toast.success(apiKey.trim() ? 'Groq key kaydedildi' : 'Groq key temizlendi');
+    setOpen(false);
+  };
+
+  const handleClear = () => {
+    setApiKey('');
+    setStoredGroqApiKey('');
+    toast.success('Groq key temizlendi');
   };
 
   return (
@@ -27,9 +33,9 @@ export default function UserMenu() {
         onClick={() => setOpen(!open)}
         className="flex items-center gap-2 rounded-lg border border-border px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
       >
-        <User className="h-4 w-4" />
-        <span className="hidden max-w-[150px] truncate sm:inline">{user.email}</span>
-        <ChevronDown className="h-3 w-3" />
+        <KeyRound className="h-4 w-4" />
+        <span className="hidden sm:inline">Groq Key</span>
+        {hasKey && <Check className="h-3.5 w-3.5 text-primary" />}
       </button>
 
       {open && (
@@ -38,19 +44,51 @@ export default function UserMenu() {
             className="fixed inset-0 z-40"
             onClick={() => setOpen(false)}
           />
-          <div className="absolute right-0 top-full z-50 mt-1 w-56 rounded-lg border border-border bg-card p-1 shadow-lg">
-            <div className="border-b border-border px-3 py-2">
-              <p className="truncate text-sm font-medium text-foreground">{user.email}</p>
-              <p className="text-xs text-muted-foreground">Hesap</p>
+          <form
+            onSubmit={handleSave}
+            className="absolute right-0 top-full z-50 mt-1 w-80 rounded-lg border border-border bg-card p-4 shadow-lg"
+          >
+            <label className="mb-1.5 block text-xs font-medium text-muted-foreground">
+              Groq API Key
+            </label>
+            <div className="relative">
+              <input
+                value={apiKey}
+                onChange={event => setApiKey(event.target.value)}
+                type={showKey ? 'text' : 'password'}
+                placeholder="gsk_..."
+                className="w-full rounded-md border border-border bg-input py-2 pl-3 pr-10 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                autoComplete="off"
+              />
+              <button
+                type="button"
+                onClick={() => setShowKey(prev => !prev)}
+                className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-muted-foreground hover:text-foreground"
+              >
+                {showKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </button>
             </div>
-            <button
-              onClick={handleSignOut}
-              className="mt-1 flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm text-destructive transition-colors hover:bg-destructive/10"
-            >
-              <LogOut className="h-4 w-4" />
-              Çıkış Yap
-            </button>
-          </div>
+            <p className="mt-2 text-xs text-muted-foreground">
+              Anahtar sadece bu tarayıcıdaki localStorage içinde saklanır.
+            </p>
+            <div className="mt-4 flex items-center justify-end gap-2">
+              <button
+                type="button"
+                onClick={handleClear}
+                className="flex items-center gap-2 rounded-md border border-border px-3 py-2 text-xs text-muted-foreground transition-colors hover:text-destructive"
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+                Temizle
+              </button>
+              <button
+                type="submit"
+                className="flex items-center gap-2 rounded-md bg-primary px-3 py-2 text-xs font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+              >
+                <Save className="h-3.5 w-3.5" />
+                Kaydet
+              </button>
+            </div>
+          </form>
         </>
       )}
     </div>

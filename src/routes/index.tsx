@@ -1,8 +1,6 @@
-import { createFileRoute, Link, useNavigate } from '@tanstack/react-router';
+import { createFileRoute, Link } from '@tanstack/react-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { fetchScenes, deleteScene } from '@/lib/api';
-import { supabase } from '@/integrations/supabase/client';
-import { useAuthContext } from '@/hooks/useAuthContext';
+import { fetchScenes, deleteScene, fetchSceneSegmentCount } from '@/lib/api';
 import UserMenu from '@/components/UserMenu';
 import { Plus, MapPin, Cloud, Calendar, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -19,41 +17,34 @@ export const Route = createFileRoute('/')({
 });
 
 function SceneListPage() {
-  const { user, loading } = useAuthContext();
-  const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const [isClient, setIsClient] = useState(false);
+
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
+
   const { data: scenes, isLoading } = useQuery({
     queryKey: ['scenes'],
     queryFn: fetchScenes,
-    enabled: !!user,
+    enabled: isClient,
   });
-
-  // Redirect to login if not authenticated
-  useEffect(() => {
-    if (!loading && !user) {
-      navigate({ to: '/auth/login' });
-    }
-  }, [user, loading, navigate]);
 
   // Fetch segment counts
   const [counts, setCounts] = useState<Record<string, number>>({});
 
   useEffect(() => {
+    if (!isClient) return;
     if (!scenes?.length) return;
     const fetchCounts = async () => {
       const results: Record<string, number> = {};
       for (const scene of scenes) {
-        const { count } = await supabase
-          .from('segments')
-          .select('*', { count: 'exact', head: true })
-          .eq('scene_id', scene.id)
-          .neq('status', 'empty');
-        results[scene.id] = count ?? 0;
+        results[scene.id] = await fetchSceneSegmentCount(scene.id);
       }
       setCounts(results);
     };
     fetchCounts();
-  }, [scenes]);
+  }, [isClient, scenes]);
 
   const handleDelete = async (id: string, e: React.MouseEvent) => {
     e.preventDefault();
@@ -67,14 +58,6 @@ function SceneListPage() {
       toast.error('Silme hatası');
     }
   };
-
-  if (loading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-background">
-        <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen bg-background p-8">
@@ -95,7 +78,7 @@ function SceneListPage() {
           </div>
         </div>
 
-        {isLoading ? (
+        {!isClient || isLoading ? (
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
             {[1, 2, 3].map(i => (
               <div key={i} className="h-48 animate-pulse rounded-xl border border-border bg-card" />
